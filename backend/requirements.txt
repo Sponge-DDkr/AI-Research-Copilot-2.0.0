@@ -1,0 +1,24 @@
+# Phase 0 — 项目骨架
+fastapi==0.115.*
+uvicorn[standard]==0.34.*
+pydantic==2.*
+openai>=1.0.0          # DeepSeek 兼容 OpenAI SDK
+python-dotenv>=1.0.0
+httpx>=0.28.0
+
+# Phase 1 — Agent Engine
+# langgraph>=0.2.0     # 状态图辅助（后续启用）
+
+# Phase 2 — 数据库 + 向量库
+sqlalchemy>=2.0.0
+chromadb>=0.5.0
+sentence-transformers>=2.0.0   # Embedding (BGE) + Cross-Encoder Reranker
+rank-bm25>=0.2.2               # BM25 关键词检索（Sparse Retriever）
+jieba>=0.42.1                  # 中文分词（BM25 + RRF 融合）
+PyPDF2>=3.0.0
+python-multipart>=0.0.19
+
+# 测试
+pytest>=8.0.0
+pytest-asyncio>=0.24.0
+pytest-httpx>=0.30.0

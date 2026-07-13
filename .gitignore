@@ -1,0 +1,41 @@
+# ========== 环境变量 ==========
+.env
+
+# ========== Python ==========
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+.venv/
+venv/
+*.egg
+
+# ========== Node ==========
+node_modules/
+frontend/dist/
+
+# ========== 数据 ==========
+data/
+*.db
+*.sqlite3
+
+# ========== Memory 运行时数据 ==========
+memory/research-*
+memory/user-name-*
+memory/user-nickname-*
+memory/assistant-name-*
+memory/ai-name-*
+memory/zhang-*
+
+# ========== 项目复盘文档（暂不公开） ==========
+Project_Review/
+
+# ========== IDE ==========
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ========== OS ==========
+.DS_Store
+Thumbs.db
