@@ -38,7 +38,7 @@ graph TD
 
 **三阶段混合检索** — Dense 向量(BGE) + Sparse BM25(jieba) → RRF 融合 → Cross-Encoder Reranker 精排。经多轮人工测试（精确检索、语义区分、否定逻辑等 8 个维度），检索质量相比纯向量检索有明显提升。
 
-**RAG Trace 实时监测** — 每次检索工具调用时，SSE 推送结构化 Trace 数据（每个片段的相关度分数、来源文件、检索管线、质量评级），Agent 时间线中渲染可展开的检索质量卡片。多因子低相关度检测（绝对分数 + 分数分布坍塌 + 头尾比），低质量时卡片红色脉冲警告，System Prompt 强制 Agent 切换 web_search。CrossEncoder v5.x 分数已在 [0,1] 区间，≥0.7 可靠匹配 / <0.3 不相关。
+**RAG Trace 实时监测** — 每次检索工具调用时，SSE 推送结构化 Trace 数据（每个片段的相关度分数、来源文件、检索管线、质量评级），Agent 时间线中渲染可展开的检索质量卡片。多因子低相关度检测（绝对分数 < 0.3 或分数分布坍塌），低质量时卡片红色脉冲警告，Agent 自动切换 web_search。CrossEncoder v5.x 分数已在 [0,1] 区间，≥0.7 可靠匹配 / <0.3 不相关。
 
 ---
 
@@ -307,12 +307,6 @@ TOOL_TIMEOUT_SECONDS=30                  # 单个工具超时
 - [x] **Phase 2**：SSE 流式 + 前后端打通（时间线 + 报告渲染 + 导出 + 历史）
 - [x] **Phase 3**：进阶功能（RAG 知识库 + 记忆系统 + 质量审核 + UI 打磨）
 - [x] **Phase 4**：Docker 部署 + 文档完善
-
-## 设计文档
-
-架构设计详解见 `Project_Review/` 目录。
-
----
 
 ## License
 
