@@ -12,7 +12,7 @@ metadata:
 - 单向推送 Agent 进度就够用（不需要双向）
 - 浏览器原生 EventSource API 支持
 - 比 WebSocket 轻量，实现更简单
-- 面试亮点：不是"做了个 loading"，而是"实时展示 Agent 协作过程"
+- 技术亮点：不是"做了个 loading"，而是"实时展示 Agent 协作过程"
 
 ## SSE 事件类型
 
@@ -35,6 +35,6 @@ metadata:
 - 需禁用 Nginx 缓冲：`X-Accel-Buffering: no`
 - 消息边界：`\n\n` 分隔，格式 `data: {json}\n\n`
 
-**Why:** 这是项目的"面试大杀器"——面试官问"怎么展示 Agent 工作过程"，回答 SSE 实时推送比"loading 动画"强一个量级。
+**Why:** SSE 实时推送直观展示 Agent 工作过程，比传统"loading 动画"更透明、更专业。
 
 **How to apply:** 新增 Agent 事件时，先在 `sse_emitter.py` 定义事件类型，再在 loop 中正确时机调用 `emit()`。前端在 `useResearchStream` 中处理新事件类型。

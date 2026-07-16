@@ -27,6 +27,6 @@ API 集成测试（pytest） — FastAPI TestClient，测端点→Agent→DB 链
 
 LLM 返回用 Mock：`AsyncMock` 模拟 `llm.chat()` 的不同返回（有 tool_call / 无 tool_call / 异常）。
 
-**Why:** 面试官不会直接问"写测试了吗"，但当你主动提到测试策略和 Mock 设计时，传递信号：你写的是工程代码，不是 demo。
+**Why:** 测试策略和 Mock 设计体现工程的严谨性——写的是工程代码，不是 demo。
 
 **How to apply:** Phase 4（Day 9）集中写测试。但 Day 2-4 写 Agent Engine 时就要考虑可测试性——LLM 调用必须通过依赖注入（`__init__` 传入 llm 参数），不能硬编码。

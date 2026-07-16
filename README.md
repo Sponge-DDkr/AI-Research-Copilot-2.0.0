@@ -310,7 +310,7 @@ TOOL_TIMEOUT_SECONDS=30                  # 单个工具超时
 
 ## 设计文档
 
-完整的设计决策、面试准备、架构详解见 [Project_Review/AI Research Copilot_Multi-Agent.md](Project_Review/AI%20Research%20Copilot_Multi-Agent.md)。
+架构设计详解见 `Project_Review/` 目录。
 
 ---
 

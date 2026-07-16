@@ -1,0 +1,14 @@
+- [AI Research Copilot 项目身份](memory/project-identity.md) — 核心定位、一句话描述、与其他方案的区别
+- [Agent Engine 设计](memory/agent-engine-design.md) — Unified Agent Loop 核心架构，为什么不走固定管线
+- [技术栈决策](memory/tech-stack-decisions.md) — 每个技术选择的理由和替代方案
+- [工具层设计](memory/tool-layer.md) — ToolRegistry 注册中心模式、核心工具列表
+- [Stop Gate 设计](memory/stop-gate-design.md) — 本地同步校验机制，不额外调 LLM
+- [SSE 流式推送](memory/sse-streaming.md) — 事件类型设计、前后端实现模式
+- [开发路线图](memory/dev-roadmap.md) — 10 天 4 Phase 的里程碑和验收标准
+- [目录结构](memory/directory-structure.md) — 项目文件组织约定
+- [数据库设计](memory/database-schema.md) — SQLite 表结构 + ChromaDB Collection
+- [MCP 集成](memory/mcp-integration.md) — 双向 MCP 架构计划（Phase 2）
+- [测试策略](memory/test-strategy.md) — 测试分层、关键用例、Mock 策略
+- [风险与应对](memory/risk-mitigation.md) — 项目风险和缓解方案
+- [API 设计](memory/api-design.md) — REST 端点列表和请求/响应格式
+- [自动进度追踪](memory/auto-completion-tracking.md) — 每完成一步自动追加总结到 Completion_Process.md

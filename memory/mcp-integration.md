@@ -22,12 +22,12 @@ Agent Loop 可以连接外部 MCP Server（如浏览器自动化 Server），获
 
 协议层：JSON-RPC 2.0 + SSE transport
 
-## 面试价值
+## 技术亮点
 
-> "我实现了双向 MCP——既能作为 Server 被外部 AI 调用，也能作为 Client 消费外部 MCP 工具。协议层使用 JSON-RPC + SSE transport，工具 Schema 遵循 JSON Schema 规范。"
+> 实现了双向 MCP——既能作为 Server 被外部 AI 调用，也能作为 Client 消费外部 MCP 工具。协议层使用 JSON-RPC + SSE transport，工具 Schema 遵循 JSON Schema 规范。
 
-这句话展示：你不只是调 API，你理解协议层设计。
+这不只是调 API，而是理解协议层设计。
 
-**Why:** MCP 是 2026 年 Agent 生态的标准协议，面试高频考点。双向实现比单向更有深度。
+**Why:** MCP 是 2026 年 Agent 生态的标准协议。双向实现比单向更有深度。
 
 **How to apply:** Phase 2（Day 7-8 之后）再启动。实现时参考 FastGPT 的 `projects/mcp_server/` 结构。[[tech-stack-decisions]]

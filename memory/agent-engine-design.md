@@ -35,6 +35,6 @@ return 最终结果
 
 同一个引擎处理所有复杂度等级。
 
-**Why:** 这是整个项目最核心的技术决策。固定管线是"为最复杂情况设计，简单情况也走全程"；Unified Loop 是"LLM 自适应复杂度"。面试时这是最重要的差异化点。
+**Why:** 这是整个项目最核心的技术决策。固定管线是"为最复杂情况设计，简单情况也走全程"；Unified Loop 是"LLM 自适应复杂度"。
 
 **How to apply:** 实现时 Agent Engine 的 `run()` 方法是唯一入口，不设任何 hard-coded 的步骤顺序。所有能力都暴露为 Tool，由 LLM 自主调度。[[tool-layer]] [[stop-gate-design]]
