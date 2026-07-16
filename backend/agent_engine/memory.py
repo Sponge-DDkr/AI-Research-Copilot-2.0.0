@@ -331,6 +331,9 @@ def save_chat_turn(user_message: str, assistant_reply: str) -> str:
     自动调用，不需 LLM 主动 save_memory。
     用户消息作为 embedding 文本，助手回复存储在 metadata。
 
+    数量上限策略：chat_history 仅负责短期上下文缓存（≤500 条），
+    超过上限时自动淘汰最旧的记录。长期记忆由 agent_memory 承担。
+
     Args:
         user_message: 用户消息（用于语义匹配）
         assistant_reply: 助手回复
@@ -351,6 +354,19 @@ def save_chat_turn(user_message: str, assistant_reply: str) -> str:
 
     try:
         collection = _get_chat_history_collection()
+
+        # 数量上限控制：超过阈值自动淘汰最旧记录
+        MAX_CHAT_HISTORY = 500
+        EVICT_COUNT = 100
+        current_count = collection.count()
+        if current_count >= MAX_CHAT_HISTORY:
+            # ChromaDB 按插入顺序存储，get(limit=EVICT_COUNT) 取最旧的
+            old = collection.get(limit=EVICT_COUNT, include=[])
+            if old and old.get("ids"):
+                collection.delete(ids=old["ids"])
+                from vector import _invalidate_bm25_cache
+                _invalidate_bm25_cache("chat_history")
+
         collection.upsert(
             ids=[mem_id],
             documents=[user_preview],  # 对用户消息做 embedding
@@ -459,7 +475,95 @@ def recall_chat_history(query: str, n_results: int = 3) -> list[dict]:
                 "score": round(item["rrf_score"], 4),
             })
 
+    # 时间衰减：语义分 × 时间因子，近期对话优先
+    turns = _apply_time_decay(turns, query)
     return turns
+
+
+def _apply_time_decay(
+    turns: list[dict],
+    query: str = "",
+    max_age_hours: int = 72,
+) -> list[dict]:
+    """对聊天历史召回结果应用时间衰减
+
+    纯语义检索无法区分"今天下午问了什么"和"两周前问了什么"——
+    两者语义相似度可能相同。时间衰减让近期对话在同等语义匹配下优先。
+
+    衰减策略（指数衰减，半衰期 24h）：
+    - 1 小时内：权重 ≈ 1.0（几乎不衰减）
+    - 24 小时：权重 = 0.5
+    - 3 天：权重 = 0.125
+    - 7 天：权重 ≈ 0.008
+
+    同时检测查询中是否含时间限定词（刚/刚才/今天/最近/上一次），
+    含时限词时大幅惩罚超过 24 小时的旧记录（额外 ×0.3）。
+
+    Args:
+        turns: recall_chat_history 的结果列表
+        query: 用户查询（用于检测时间限定词）
+        max_age_hours: 超过此时长的记录直接过滤（0 表示不过滤）
+
+    Returns:
+        按衰减后分数降序排列的结果列表，过滤掉分数过低的条目
+    """
+    from datetime import datetime, timezone, timedelta
+    from math import exp
+
+    if not turns:
+        return turns
+
+    CST = timezone(timedelta(hours=8))
+    now = datetime.now(CST)
+
+    # 检测用户是否用了时间限定词
+    time_bound_keywords = [
+        "刚才", "刚刚", "刚问", "刚才问", "上一次", "上次",
+        "今天", "今天问", "最近", "最新的", "当前",
+        "刚刚说", "刚才说", "之前问",
+    ]
+    has_time_binding = any(kw in query for kw in time_bound_keywords)
+
+    HALF_LIFE_HOURS = 24.0
+    decayed = []
+    for turn in turns:
+        ts_str = turn.get("timestamp", "")
+        if not ts_str:
+            decayed.append(turn)
+            continue
+
+        try:
+            ts = datetime.strptime(ts_str, "%Y-%m-%d %H:%M").replace(tzinfo=CST)
+        except ValueError:
+            decayed.append(turn)
+            continue
+
+        age_hours = (now - ts).total_seconds() / 3600
+
+        # 超过最大时限的直接过滤
+        if max_age_hours > 0 and age_hours > max_age_hours:
+            continue
+
+        # 指数衰减：weight = 2^(-age / half_life)
+        time_weight = 2 ** (-age_hours / HALF_LIFE_HOURS)
+
+        # 时间限定词惩罚：用户说"刚才"但记录已超过 24h → 大幅降权
+        if has_time_binding and age_hours > 24:
+            time_weight *= 0.3
+
+        turn["score"] = round(turn["score"] * time_weight, 4)
+        # 保留原始分数用于调试对比
+        turn["age_hours"] = round(age_hours, 1)
+        decayed.append(turn)
+
+    # 按衰减后分数降序排列
+    decayed.sort(key=lambda x: x["score"], reverse=True)
+
+    # 过滤：衰减后分数太低的结果不再返回
+    SCORE_FLOOR = 0.05
+    decayed = [t for t in decayed if t["score"] >= SCORE_FLOOR]
+
+    return decayed
 
 
 # ═══════════════════════════════════════════════════
