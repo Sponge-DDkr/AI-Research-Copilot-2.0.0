@@ -7,6 +7,15 @@ metadata:
 
 # Agent Engine 设计（核心创新点）
 
+## 两种入口，两种架构
+
+项目提供聊天和深度研究两个入口，底层架构不同：
+
+- **深度研究**（`/api/research/stream`）：UnifiedAgentLoop 自循环 + Stop Gate，9 个工具，LLM 自主迭代
+- **聊天**（`/api/chat`）：独立的两轮调用（LLM+工具 → LLM 最终回答），4 个工具，不循环
+
+Unified Agent Loop 仅用于深度研究模式。
+
 ## 为什么不走固定管线
 
 原方案是固定的 5-Agent 管线（Planner → Research → Analyst → Writer → Reviewer），问题：

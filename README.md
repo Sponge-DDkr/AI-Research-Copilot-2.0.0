@@ -11,19 +11,30 @@
 
 ## 架构概览
 
+项目提供两个入口，底层架构不同：
+
+| 入口 | 架构 | 可用工具 | 特点 |
+|------|------|---------|------|
+| **深度研究** `POST /api/research/stream` | UnifiedAgentLoop 自循环 + Stop Gate | 全部 9 个 | 自主迭代、质量校验、SSE 实时推送 |
+| **聊天** `POST /api/chat` | 固定两轮调用（工具→回答） | 4 个（搜索+记忆） | 快速响应、自动记忆检索、对话存档 |
+
 ```mermaid
 graph TD
-    A[用户输入] --> B[FastAPI Backend]
-    B --> C[Unified Agent Loop]
-    C --> D{复杂度判断}
-    D -->|简单| E[直接回答]
-    D -->|复杂| F[创建 Plan]
-    F --> G[web_search]
-    F --> H[search_knowledge_base]
-    F --> I[write_section / review]
-    G & H & I --> J[Stop Gate 校验]
-    J -->|通过| K[SSE 推送完成]
-    J -->|不通过| C
+    A[用户输入] --> B{入口选择}
+    B -->|深度研究| C[Unified Agent Loop]
+    B -->|聊天| D[两轮调用]
+    C --> E{LLM 自主判断}
+    E -->|简单| F[直接回答]
+    E -->|复杂| G[创建 Plan]
+    F --> H[Stop Gate 校验]
+    G --> I[web_search / search_knowledge_base]
+    G --> J[write_section / review / fact_check]
+    I & J --> H
+    H -->|通过| K[SSE 推送完成]
+    H -->|不通过| C
+    D --> L[LLM + 4工具调用]
+    L --> M[执行工具]
+    M --> N[LLM 最终回答]
 ```
 
 ### 核心设计
@@ -46,12 +57,16 @@ graph TD
 
 ### 两种研究模式
 
-| 模式 | 入口 | 适用场景 |
-|------|------|---------|
-| **研究模式** | `POST /api/research/stream` | 深度研究任务，SSE 实时推送 Agent 进度 |
-| **聊天模式** | `POST /api/chat` | 快速问答，自动检索记忆 + 对话历史 |
+| 模式 | 入口 | 架构 | 适用场景 |
+|------|------|------|---------|
+| **深度研究** | `POST /api/research/stream` | UnifiedAgentLoop 自循环，9 工具 | 复杂报告、市场分析、技术调研，需分章节+引用+审核 |
+| **聊天** | `POST /api/chat` | 独立两轮调用（工具→回答），4 工具 | 快速问答、实时信息、知识库检索、日常对话 |
 
-### Agent 工具链（9 个工具）
+聊天模式下若用户要求生成分析报告，System Prompt 会引导其切换到深度研究模式，避免在聊天中用不完整的工具链勉强输出低质量长文。
+
+### Agent 工具链
+
+**深度研究模式（9 个工具）**：
 
 | 工具 | 功能 |
 |------|------|
@@ -59,9 +74,11 @@ graph TD
 | `web_search` | Tavily API 互联网搜索 |
 | `search_knowledge_base` | 三阶段混合检索本地知识库 |
 | `write_section` | 撰写结构化报告章节 |
-| `review_section` | 4 维度章节质量评审 |
-| `fact_check` | 事实声明交叉验证 |
-| `save_memory` / `recall_memory` | 持久记忆存取 |
+| `review_section` | 4 维度章节质量评审（准确性/完整性/可读性/格式） |
+| `fact_check` | 事实声明交叉验证，标注可信度 |
+| `save_memory` / `recall_memory` | 持久记忆存取（双写：文件 + ChromaDB） |
+
+**聊天模式（4 个工具）**：`web_search`、`search_knowledge_base`、`recall_memory`、`save_memory`。聊天不具备 Plan/Write/Review/FactCheck 能力，复杂报告任务由 System Prompt 引导用户切换到深度研究。
 
 ### 记忆系统
 
