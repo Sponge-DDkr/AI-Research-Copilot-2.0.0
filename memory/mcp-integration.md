@@ -1,33 +1,25 @@
 ---
 name: mcp-integration
-description: 双向 MCP 集成计划——Server 端暴露能力 + Client 端消费外部工具
+description: MCP 集成计划——独立 mcp-knowledge-agent 项目
 metadata:
   type: project
 ---
 
-# MCP 集成（Phase 2 加分项）
+# MCP 集成
 
-## 双向 MCP 架构
+## 实际实现
 
-### Server 端：暴露 Research Copilot 能力
-外部 AI（Claude Desktop / Cursor IDE）通过 MCP 协议调用：
-- `deep_research` — 深度研究某个主题
-- `quick_search` — 快速搜索并总结
-- `generate_report` — 生成结构化报告
+AI Research Copilot 本身未内置 MCP 协议层。MCP 能力拆分到了独立的 **mcp-knowledge-agent** 项目：
 
-技术：`mcp` Python SDK 或 `fastmcp`，SSE transport（复用 FastAPI server）
+- **MCP Server 端**（已实现）：将知识库 RAG 检索管线封装为 8 个 MCP 工具（`search_knowledge`、`answer_with_citation`、`search_similar` 等），通过 stdio transport 供 Claude Desktop / Claude Code / Cursor / DataAgent 调用
+- **MCP Client 端**（未实现）：Agent Loop 消费外部 MCP 工具的功能目前不在开发范围内
 
-### Client 端：消费外部 MCP 工具
-Agent Loop 可以连接外部 MCP Server（如浏览器自动化 Server），获取需要 JS 渲染的动态网页内容——传统 HTTP 爬取拿不到。
+## 原始计划（设计阶段）
 
-协议层：JSON-RPC 2.0 + SSE transport
+> 计划实现双向 MCP——Server 端暴露 Research Copilot 能力，Client 端消费外部 MCP 工具（如浏览器自动化）。协议层使用 JSON-RPC + SSE transport。
 
-## 技术亮点
+实际执行时，考虑到独立的 MCP Server 复用性更好（一套代码四个下游消费者），选择了将 MCP 层拆分为独立项目。
 
-> 实现了双向 MCP——既能作为 Server 被外部 AI 调用，也能作为 Client 消费外部 MCP 工具。协议层使用 JSON-RPC + SSE transport，工具 Schema 遵循 JSON Schema 规范。
+**Why:** MCP 是 2026 年 Agent 生态的标准协议。独立 Server 项目比内嵌在 FastAPI 中更干净、更容易复用。
 
-这不只是调 API，而是理解协议层设计。
-
-**Why:** MCP 是 2026 年 Agent 生态的标准协议。双向实现比单向更有深度。
-
-**How to apply:** Phase 2（Day 7-8 之后）再启动。实现时参考 FastGPT 的 `projects/mcp_server/` 结构。[[tech-stack-decisions]]
+**How to apply:** MCP Server 项目位于 `../mcp-knowledge-agent/`，使用 `python -m mcp_knowledge_agent` 启动。[[tech-stack-decisions]]

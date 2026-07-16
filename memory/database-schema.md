@@ -40,7 +40,7 @@ metadata:
 Collection: "research_docs"
   - documents: 文档片段（chunk）
   - metadatas: {source, chunk_index, title}
-  - embeddings: BAAI/bge-small-zh-v1.5 (512维)
+  - embeddings: BAAI/bge-large-zh-v1.5 (1024维)，fallback BAAI/bge-base-zh-v1.5 (768维)
 ```
 
 **Why:** SQLite 单文件零配置适合 Demo，但表结构设计要展示工程思维——有日志表说明考虑了可观测性，有状态字段说明考虑了生命周期管理。

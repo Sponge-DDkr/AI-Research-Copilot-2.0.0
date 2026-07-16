@@ -45,7 +45,7 @@ metadata:
 | Agent 编排 | 自研 Unified Agent Loop + LangGraph 辅助 | 学习 FastGPT 生产实践，同时保留状态管理能力 |
 | Agent 范式 | ReAct + Plan-and-Execute 混合 | 简单快速响应，复杂有规划执行 |
 | 流式推送 | SSE（非 WebSocket） | 单向推送够用，浏览器原生支持，比 WebSocket 轻量 |
-| 工具协议 | MCP 兼容 | 2026 年 Agent 生态标准 |
+| 工具协议 | 自定义 Tool Registry（装饰器注册） | 灵活轻量，无外部协议依赖 |
 
 **Why:** 每个技术选择背后都有明确的权衡考量，不盲从流行方案，按实际场景做决策。
 
