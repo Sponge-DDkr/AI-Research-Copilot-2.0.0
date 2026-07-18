@@ -37,7 +37,8 @@
 
 - [user-name-spongejam](user-name-spongejam.md) — 用户的名字叫海绵酱
 
-- [user-nickname-erdan](user-nickname-erdan.md) — 用户给AI助手取名为"二蛋"
+- [user-nickname-erdan](user-nickname-erdan.md) — 用户昵称叫二蛋，称呼我为小MO
+
 
 - [user-nickname-shadan](user-nickname-shadan.md) — 用户称呼自己为"傻蛋"
 
@@ -104,3 +105,9 @@
 - [research-文档中提到了哪些关于量子计算的内容-20260713-1649](research-文档中提到了哪些关于量子计算的内容-20260713-1649.md) — 研究任务：文档中提到了哪些关于量子计算的内容？
 
 - [model-cache-locations](model-cache-locations.md) — 本地依赖缓存路径和磁盘占用——HuggingFace 模型、Python 包、Node 包
+
+- [user-name-and-assistant-name](user-name-and-assistant-name.md) — 用户叫二蛋，给我取的名字叫小MO
+
+- [research-企业架构规范最新版本是多少-20260718-1605](research-企业架构规范最新版本是多少-20260718-1605.md) — 研究任务：企业架构规范最新版本是多少
+
+- [research-根据我提供的文档-python-3-13-在异步方面有什么变更-20260718-1609](research-根据我提供的文档-python-3-13-在异步方面有什么变更-20260718-1609.md) — 研究任务：根据我提供的文档，Python 3.13 在异步方面有什么变更
