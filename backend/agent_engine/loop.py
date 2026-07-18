@@ -293,6 +293,8 @@ class UnifiedAgentLoop:
             else:
                 # 4. 无 tool_call → Stop Gate 校验
                 content = assistant_msg.content or ""
+                # 组装最终报告：LLM 用 write_section 写了各章节但最后一轮可能没拼接
+                content = self._assemble_report(state, content)
                 check = self.stop_gate.check(state, content)
 
                 if check.passed:
@@ -350,6 +352,7 @@ class UnifiedAgentLoop:
             })
             response = await self._call_llm(state, complexity_hint)
             content = response.choices[0].message.content or ""
+            content = self._assemble_report(state, content)
 
             if content and len(content.strip()) >= 50:
                 state.final_report = content
@@ -504,6 +507,25 @@ class UnifiedAgentLoop:
             await self.emitter.step_completed(
                 step_id, detail=step.description if step else ""
             )
+
+    def _assemble_report(self, state: AgentState, llm_content: str) -> str:
+        """组装最终报告：从 plan steps 拼接已完成的 write_section 产出。
+
+        策略：只要 plan 中有已完成步骤的内容，直接拼接返回。
+        不依赖 LLM 在最后一轮手动拼接——那是不可靠的。
+        """
+        # 收集所有有内容的步骤（不限于 done，in_progress 也可能有内容）
+        steps_with_content = [
+            s for s in state.plan
+            if s.content.strip() and s.status in ("done", "in_progress")
+        ]
+        if not steps_with_content:
+            return llm_content
+
+        assembled = "\n\n".join(s.content.strip() for s in steps_with_content)
+        if len(assembled) > 300:
+            return assembled
+        return llm_content
 
     def _build_messages(
         self, state: AgentState, complexity_hint: dict | None = None

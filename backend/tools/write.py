@@ -53,14 +53,28 @@ async def write_section(state, llm, title: str, description: str) -> str:
     except Exception as e:
         return f"[Error] 写作失败: {str(e)}"
 
-    # 把产出存到当前进行中的 plan step
+    # 把产出存到对应的 plan step（按优先级匹配）
+    # 1. 正在进行的步骤
     in_progress = [s for s in state.plan if s.status == "in_progress"]
     if in_progress:
         in_progress[0].content = content
     else:
-        # 如果没标记 in_progress，找第一个 pending 的
+        # 2. 第一个待开始的步骤
         pending = state.get_pending_steps()
         if pending:
             pending[0].content = content
+        else:
+            # 3. 兜底：所有步骤都 done 了 → 找标题最匹配的步骤覆盖
+            best = None
+            for s in state.plan:
+                if title in s.description or s.description in title:
+                    best = s
+                    break
+            if best is None and state.plan:
+                # 没匹配到，找第一个 done 步骤（通常是同一轮重复写）
+                done_steps = [s for s in state.plan if s.status == "done"]
+                best = done_steps[-1] if done_steps else state.plan[-1]
+            if best:
+                best.content = content
 
     return f"## {title}\n\n{content}"

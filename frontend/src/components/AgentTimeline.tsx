@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo } from 'react'
+import { useEffect, useRef, useMemo, useCallback, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import type { TimelineStep, RagTracePayload } from '../types'
 
@@ -8,15 +8,19 @@ interface AgentTimelineProps {
 }
 
 /** 单个时间线条目 */
-function TimelineItem({ step, isLast }: { step: TimelineStep; isLast: boolean }) {
+function TimelineItem({ step, isLast, shouldAutoScroll }: {
+  step: TimelineStep
+  isLast: boolean
+  shouldAutoScroll: React.MutableRefObject<boolean>
+}) {
   const itemRef = useRef<HTMLDivElement>(null)
 
-  // 自动滚动到最新步骤
+  // 自动滚动到最新步骤（用户在看历史内容时抑制）
   useEffect(() => {
-    if (step.status === 'running') {
+    if (step.status === 'running' && shouldAutoScroll.current) {
       itemRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     }
-  }, [step.status])
+  }, [step.status, shouldAutoScroll])
 
   const statusColor = {
     running: 'border-blue-500 bg-blue-50',
@@ -154,9 +158,25 @@ function SkeletonStep() {
 /** Agent 执行过程时间线 */
 export function AgentTimeline({ steps, loading }: AgentTimelineProps) {
   const endRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef(true)        // 实时值，供 TimelineItem useEffect 读取（避免闭包过期）
+  const [autoScroll, setAutoScroll] = useState(true)  // 驱动 UI 提示更新
 
+  // 监听用户手动滚动：上翻超过 100px 则抑制自动滚动，滚回底部恢复
+  const handleScroll = useCallback(() => {
+    const el = containerRef.current
+    if (!el) return
+    const nearBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 100
+    scrollRef.current = nearBottom
+    // 仅在值真正变化时更新 state，避免高频重渲染
+    setAutoScroll(prev => prev !== nearBottom ? nearBottom : prev)
+  }, [])
+
+  // 新步骤加入时自动滚到底部（用户在看历史内容时抑制）
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (scrollRef.current) {
+      endRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
   }, [steps.length])
 
   if (steps.length === 0 && !loading) return null
@@ -174,11 +194,22 @@ export function AgentTimeline({ steps, loading }: AgentTimelineProps) {
         {!loading && steps.length > 0 && (
           <span className="text-xs text-green-500 font-medium">✓ 完成</span>
         )}
+        {/* 暂停滚动提示 */}
+        {!autoScroll && loading && (
+          <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
+            已暂停自动滚动
+          </span>
+        )}
       </div>
 
-      <div className="max-h-64 overflow-y-auto">
+      <div ref={containerRef} onScroll={handleScroll} className="max-h-64 overflow-y-auto">
         {steps.map((step, i) => (
-          <TimelineItem key={step.id} step={step} isLast={i === steps.length - 1} />
+          <TimelineItem
+            key={step.id}
+            step={step}
+            isLast={i === steps.length - 1}
+            shouldAutoScroll={scrollRef}
+          />
         ))}
 
         {/* 加载占位 — 骨架屏 */}

@@ -141,7 +141,8 @@ async def recall_memory(
             best_score < 0.3
             or (score_spread < 0.1 and best_score < 0.5)
         )
-        is_score_collapse = score_spread < 0.08 and len(scores_list) > 1
+        # 分数坍塌：仅在分数低且集中时触发。高分集中（如 0.85/0.83/0.80）说明多份记忆都相关
+        is_score_collapse = score_spread < 0.08 and median_score < 0.5 and len(scores_list) > 1
 
         warning_text = ""
         if is_low_relevance:

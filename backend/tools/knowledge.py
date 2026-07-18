@@ -120,13 +120,14 @@ async def search_knowledge_base(
 
         # 三因子综合判断低相关度：
         #   因子1 — 绝对分数：最佳 < 0.3（模型明确判断不相关）
-        #   因子2 — 分数坍塌：spread < 0.1（模型无法区分，所有文档差不多差）
+        #   因子2 — 分数坍塌：spread < 0.1 且中位数 < 0.5（都低且无法区分）
         #   因子3 — 头尾比：best/median < 2.0（没有明显更优的文档）
         is_low_relevance = (
             best_score < 0.3
             or (score_spread < 0.1 and best_score < 0.5)
         )
-        is_score_collapse = score_spread < 0.08
+        # 分数坍塌仅在「分数低且集中」时触发，高分集中（如 0.85/0.83/0.80）说明多个片段都相关，不应判为差
+        is_score_collapse = score_spread < 0.08 and median_score < 0.5
 
         warning_text = ""
         if is_low_relevance:
@@ -190,6 +191,12 @@ async def search_knowledge_base(
             lines.append(f"### {rank+1}. {source}（片段 {chunk_idx}，相关度: {score:.0%}）")
             lines.append(f"{doc[:800]}")
             lines.append("")
+
+        # 引用提示：告知 LLM 如何格式化知识库来源
+        lines.append("---")
+        lines.append("**📎 知识库引用格式**：报告中引用以上文档时，在「参考资料」章节使用：")
+        lines.append(f"`{{文件名}} - 知识库文档`（如 `{coarse_items[0]['meta'].get('source_file', '文档.md') if coarse_items else '文档.md'} - 知识库文档`）")
+        lines.append("仅使用文件名，不要附加文件正文内的作者、日期等元数据。")
 
         # 低相关度强提示（让 Agent 必须切换 web_search）
         if is_low_relevance:
