@@ -9,9 +9,11 @@
 1. Agent 手动 — save_memory 工具 → write_memory_file() + ChromaDB upsert
 2. 代码级自动 — auto_save_research() 在研究完成时自动保存结论
 
-延迟注入：
-- 记忆注入到 System Prompt 只在 Agent Loop 第一次迭代时执行
-- 后续迭代复用 state.memory_injected 标记跳过（省 ~4000 tokens/任务）
+记忆使用策略（2026-07-18 更新）：
+- 聊天模式：_fetch_relevant_context() 自动检索对话历史（chat_history）+ 持久记忆（agent_memory）
+- 深度研究：不自动注入记忆，LLM 仅通过知识库 + web_search 获取内容。
+  研究结论仍通过 auto_save_research() 归档到 agent_memory，供聊天模式检索。
+  深度研究 Agent 不再主动调用 recall_memory（已从 System Prompt 移除）。
 """
 
 import json
@@ -610,16 +612,23 @@ def _apply_time_decay(
 
 
 # ═══════════════════════════════════════════════════
-# 记忆注入（System Prompt 用）
+# 记忆上下文构建（聊天模式 System Prompt 用）
 # ═══════════════════════════════════════════════════
+#
+# 注意（2026-07-18）：深度研究不再调用此函数。
+# 深度研究的内容来源是知识库切片 + 网络搜索结果，不需要持久记忆注入。
+# 此函数仅供聊天模式的 _build_chat_system_prompt 使用（如果将来需要）。
 
 
 def build_memory_context(task: str) -> str:
-    """构建要注入 System Prompt 的记忆上下文
+    """构建要注入 System Prompt 的记忆上下文（当前仅供聊天模式使用）
 
     含两部分：
     1. MEMORY.md 索引（文件层概览）
     2. ChromaDB 语义召回（与当前任务最相关的记忆）
+
+    深度研究不再调用此函数——研究聚焦于知识库+web_search，
+    持久记忆仅由 auto_save_research() 写入，供聊天模式检索。
 
     Args:
         task: 当前任务描述，用于语义召回

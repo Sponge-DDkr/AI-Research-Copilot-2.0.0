@@ -550,21 +550,10 @@ class UnifiedAgentLoop:
             + search_hint
         )
 
-        # ── 记忆注入（仅首轮迭代，避免重复注入省 token）──
-        if not state.memory_injected:
-            state.memory_injected = True
-            try:
-                from agent_engine.memory import build_memory_context
-                memory_ctx = build_memory_context(state.task)
-                if memory_ctx:
-                    system_content += (
-                        "\n\n---\n\n"
-                        "## 持久记忆（来自之前的研究和对话）\n\n"
-                        f"{memory_ctx}\n\n"
-                        "**提示**：上述记忆可供参考。用 recall_memory 工具可再次检索。"
-                    )
-            except Exception:
-                pass  # 记忆加载失败不阻塞主流程
+        # 注：深度研究不自动注入持久记忆。
+        # 设计决策（2026-07-18）：深度研究的唯一内容来源是知识库切片 + 网络搜索结果。
+        # 持久记忆（agent_memory）是聊天模式的上下文工具，不应干扰研究聚焦。
+        # 研究结论仍通过 auto_save_research() 自动归档到 agent_memory，供聊天模式检索。
 
         messages: list[dict] = [{"role": "system", "content": system_content}]
 

@@ -76,7 +76,7 @@ graph TD
 | `write_section` | 撰写结构化报告章节 |
 | `review_section` | 4 维度章节质量评审（准确性/完整性/可读性/格式） |
 | `fact_check` | 事实声明交叉验证，标注可信度 |
-| `save_memory` / `recall_memory` | 持久记忆存取（双写：文件 + ChromaDB） |
+| `save_memory` | 持久记忆存取（双写：文件 + ChromaDB） |
 
 **聊天模式（4 个工具）**：`web_search`、`search_knowledge_base`、`recall_memory`、`save_memory`。聊天不具备 Plan/Write/Review/FactCheck 能力，复杂报告任务由 System Prompt 引导用户切换到深度研究。
 
@@ -88,10 +88,9 @@ graph TD
 工作记忆 (AgentState) → 情节记忆 (ChromaDB + 文件) → 语义记忆 (向量检索) → 程序记忆 (System Prompt)
 ```
 
-- **对话自动存档**：每轮对话自动存入 `chat_history` collection，上限 500 条自动淘汰
+- **聊天模式记忆**：每条消息自动检索对话历史（`chat_history`）+ 持久记忆（`agent_memory`），注入 System Prompt。对话自动存档，上限 500 条自动淘汰。
 - **聊天记忆时间衰减**：召回时对历史对话应用指数时间衰减（24h 半衰期），检测"刚才/今天"等时间限定词，超过 72h 的旧记录自动过滤，避免旧对话干扰当前上下文
-- **研究自动记忆**：研究完成后自动提取关键发现
-- **语义召回**：用户消息驱动检索，对话历史优先 + 持久记忆补充
+- **深度研究记忆**：不自动注入持久记忆，内容来源锁定为知识库切片 + 网络搜索结果。研究结论通过 `auto_save_research()` 自动归档到 `agent_memory`，供聊天模式检索
 - **短期/长期记忆分工**：`chat_history` 负责近期上下文缓存（有限条数+时间衰减），`agent_memory` 负责用户偏好和研究结论的永久存储
 
 ### 知识库 RAG
@@ -250,7 +249,7 @@ ai-research-copilot/
 │   ├── agent_engine/              # Agent 核心引擎
 │   │   ├── loop.py                #   UnifiedAgentLoop + StopGate
 │   │   ├── state.py               #   AgentState + PlanStep 数据结构
-│   │   ├── prompt.py              #   System Prompt + 记忆注入
+│   │   ├── prompt.py              #   System Prompt（行为规则 + 复杂度判断 + 数据分析指南）
 │   │   ├── memory.py              #   记忆管理（文件 + ChromaDB + 对话存档）
 │   │   ├── router.py              #   quick_classify() 复杂度预检
 │   │   └── sse_emitter.py         #   SSE 事件发射器

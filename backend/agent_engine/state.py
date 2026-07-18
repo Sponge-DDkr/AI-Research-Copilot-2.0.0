@@ -24,7 +24,6 @@ class AgentState:
     messages: list[dict[str, Any]] = field(default_factory=list)
     tool_results: dict[str, Any] = field(default_factory=dict)
     final_report: str = ""
-    memory_injected: bool = False  # 记忆是否已在首轮迭代注入（避免重复注入）
     emitter: Any = None  # SSE 事件发射器（Loop 注入，供工具发射 rag_trace 用）
 
     # ── 辅助方法 ──

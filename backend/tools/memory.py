@@ -1,8 +1,9 @@
 """记忆工具 — save_memory + recall_memory，注册到 Agent Loop
 
-Agent 可在研究过程中主动调用这两个工具来：
-- save_memory：保存重要的研究结论、经验、用户偏好
-- recall_memory：搜索之前的记忆，避免重复研究
+save_memory：深度研究 LLM 可在研究过程中主动调用，保存重要结论。
+recall_memory：已从深度研究 System Prompt 移除（2026-07-18），
+  深度研究的内容来源是知识库 + web_search，不依赖持久记忆。
+  此工具保留供聊天模式使用。
 """
 
 from typing import Any
