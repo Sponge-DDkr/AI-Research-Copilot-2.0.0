@@ -29,7 +29,12 @@ memory/ai-name-*
 memory/zhang-*
 
 # ========== 项目复盘文档（暂不公开） ==========
-Project_Review/
+Project_Review/AI_Research_Copilot_Agent.md
+Project_Review/ARC_Interview_Questions.md
+Project_Review/BDA_Project/
+Project_Review/Completion_Process.md
+Project_Review/Rusume_Model.md
+Project_Review/mcp_knowledge_server_design.md
 
 # ========== IDE ==========
 .vscode/
