@@ -43,16 +43,42 @@ def _fetch_relevant_context(user_message: str, n: int = 5) -> str:
     2. 精排：BGE Reranker Cross-Encoder 重排序 top-n（精度显著高于纯向量检索）
     3. 阈值过滤：Reranker 分数 ≥ 0.40 的结果才注入 System Prompt
 
+    时间限定词特殊处理：
+    "刚刚/刚才/今天"等时间限定词的意图是时间指向而非语义匹配。
+    检测到这类词时，直接按时间戳取最近 N 条对话注入，确保 LLM 看到真正最近的上下文。
+
     对话历史优先：之前的聊天记录匹配度最高，应排在前面。
     agent_memory 是 LLM 显式保存的记忆，作为补充。
     Reranker 不可用时自动降级为纯向量检索 + cosine 分数阈值。
     """
     try:
-        from agent_engine.memory import recall_memories, recall_chat_history
+        from agent_engine.memory import recall_memories, recall_chat_history, get_recent_chat_turns
 
         lines: list[str] = []
 
-        # 1. 对话历史（优先）
+        # ── 时间限定词检测：绕过语义检索，直接按时间取最近对话 ──
+        time_binding_keywords = [
+            "刚才", "刚刚", "刚问", "刚才问",
+            "今天", "今天问", "最近", "上一次", "上次",
+            "刚刚说", "刚才说", "之前问",
+        ]
+        has_time_binding = any(kw in user_message for kw in time_binding_keywords)
+
+        if has_time_binding:
+            recent_turns = get_recent_chat_turns(n=n)
+            if recent_turns:
+                lines.append("## 最近对话（按时间排序 ⬇ 最新在前）\n")
+                lines.append("**用户使用了时间限定词（刚刚/刚才/今天等），以下为最近的实际对话记录，优先参考。**\n")
+                for i, turn in enumerate(recent_turns, 1):
+                    ts = turn.get("timestamp", "")
+                    lines.append(f"### {i}. 对话记录（{ts}）")
+                    lines.append(f"**用户说**：{turn['user_message'][:500]}")
+                    lines.append(f"**助手回**：{turn['assistant_reply'][:500]}")
+                    lines.append("")
+            # 时间限定词场景下跳过语义检索——语义检索会命中旧对话而非最近对话
+            return "\n".join(lines) if lines else ""
+
+        # 1. 对话历史（优先）— 语义检索
         chat_turns = recall_chat_history(user_message, n_results=n)
         relevant_chat = [t for t in chat_turns if t["score"] >= MEMORY_SCORE_THRESHOLD]
         if relevant_chat:

@@ -386,6 +386,49 @@ def save_chat_turn(user_message: str, assistant_reply: str) -> str:
         return ""
 
 
+def get_recent_chat_turns(n: int = 10) -> list[dict]:
+    """按时间戳取最近 N 轮对话（不经过语义检索）
+
+    用于处理时间限定查询（"刚刚问了什么""今天聊了什么"）——
+    这类查询的意图是时间指向，不是语义匹配，语义检索反而会命中旧对话。
+
+    Args:
+        n: 返回条数
+
+    Returns:
+        按时间戳降序排列的最近对话列表
+    """
+    try:
+        collection = _get_chat_history_collection()
+    except Exception:
+        return []
+
+    total = collection.count()
+    if total == 0:
+        return []
+
+    # ChromaDB 按插入顺序存储，需取全量后按时间戳排序
+    # chat_history 上限 500 条，全量取性能可接受
+    result = collection.get(limit=min(total, 500), include=["metadatas"])
+    if not result or not result.get("ids"):
+        return []
+
+    turns = []
+    for i, doc_id in enumerate(result["ids"]):
+        meta = result["metadatas"][i] if result.get("metadatas") else {}
+        turns.append({
+            "id": doc_id,
+            "user_message": meta.get("user_message", ""),
+            "assistant_reply": meta.get("assistant_reply", ""),
+            "timestamp": meta.get("timestamp", ""),
+        })
+
+    # 按时间戳降序排列（最新的在前）
+    turns.sort(key=lambda t: t.get("timestamp", ""), reverse=True)
+
+    return turns[:n]
+
+
 def recall_chat_history(query: str, n_results: int = 3) -> list[dict]:
     """从对话历史中召回相关轮次（三阶段：Dense+Sparse → RRF → Reranker）
 
