@@ -109,7 +109,16 @@ class StopGate:
 
         # ── 2. Plan 完成度 ──
         incomplete = [s for s in state.plan if s.status == "pending"]
-        done_count = sum(1 for s in state.plan if s.status == "done")
+        # 已标 done 但无内容的步骤也算未完成（LLM 可能跳过写直接标完成）
+        done_without_content = [
+            s for s in state.plan
+            if s.status == "done" and not s.content.strip()
+        ]
+        incomplete.extend(done_without_content)
+        done_count = sum(
+            1 for s in state.plan
+            if s.status == "done" and s.content.strip()
+        )
 
         if len(incomplete) > 1:
             pending_descs = [s.description for s in incomplete]
@@ -295,6 +304,8 @@ class UnifiedAgentLoop:
                 content = assistant_msg.content or ""
                 # 组装最终报告：LLM 用 write_section 写了各章节但最后一轮可能没拼接
                 content = self._assemble_report(state, content)
+                # 代码级兜底：用了 web_search 但缺链接 → 自动补参考资料
+                content = self._ensure_references(content, state)
                 check = self.stop_gate.check(state, content)
 
                 if check.passed:
@@ -353,6 +364,7 @@ class UnifiedAgentLoop:
             response = await self._call_llm(state, complexity_hint)
             content = response.choices[0].message.content or ""
             content = self._assemble_report(state, content)
+            content = self._ensure_references(content, state)
 
             if content and len(content.strip()) >= 50:
                 state.final_report = content
@@ -393,7 +405,7 @@ class UnifiedAgentLoop:
             messages=messages,
             tools=tools,
             temperature=0.7,
-            max_tokens=4000,
+            max_tokens=8000,
         )
 
     async def _execute_and_record_tool(self, tool_call, state: AgentState):
@@ -511,21 +523,60 @@ class UnifiedAgentLoop:
     def _assemble_report(self, state: AgentState, llm_content: str) -> str:
         """组装最终报告：从 plan steps 拼接已完成的 write_section 产出。
 
-        策略：只要 plan 中有已完成步骤的内容，直接拼接返回。
+        策略：只要 plan 中有步骤的内容，直接拼接返回——不限状态。
         不依赖 LLM 在最后一轮手动拼接——那是不可靠的。
+
+        注意：write_section 存内容后不改 step.status，需要 LLM 额外调 update_plan。
+        因此收集时只看 content 是否有值，不看 status，防止 LLM 忘记 update_plan
+        导致已写内容无法拼入报告。
         """
-        # 收集所有有内容的步骤（不限于 done，in_progress 也可能有内容）
+        # 收集所有有内容的步骤（不限状态——write_section 存在 pending 也可能有内容）
         steps_with_content = [
-            s for s in state.plan
-            if s.content.strip() and s.status in ("done", "in_progress")
+            s for s in state.plan if s.content.strip()
         ]
         if not steps_with_content:
             return llm_content
 
         assembled = "\n\n".join(s.content.strip() for s in steps_with_content)
-        if len(assembled) > 300:
+
+        # 取 LLM 输出和拼接结果中更长的那个
+        llm_len = len(llm_content.strip())
+        if len(assembled) >= llm_len:
             return assembled
+        # LLM 输出更长 → 但拼接结果也有内容 → 合并：拼接结果 + LLM 额外部分
+        if len(assembled) > 300 and llm_len > len(assembled):
+            return assembled + "\n\n" + llm_content.strip()
         return llm_content
+
+    def _ensure_references(self, content: str, state: AgentState) -> str:
+        """自动追加参考资料：如果用了 web_search 但报告缺链接，代码级补全。
+
+        LLM 经常在 write_section 各章节时忘了带 URL，最后一轮输出也可能漏掉。
+        这里不依赖 LLM 记忆，直接从 tool_results 提取搜索结果的 URL，兜底补全。
+        """
+        search_data = state.tool_results.get("web_search")
+        if not search_data:
+            return content  # 没搜索过，不需要参考资料
+
+        has_url = "http://" in content or "https://" in content
+        if has_url:
+            return content  # 已有 URL，不重复追加
+
+        # 从搜索结果提取 URL 列表
+        results = search_data.get("results", [])
+        if not results:
+            return content
+
+        ref_lines = ["\n\n## 参考资料"]
+        for i, r in enumerate(results, 1):
+            title = r.get("title", "无标题")
+            url = r.get("url", "")
+            if url:
+                ref_lines.append(f"{i}. [{title}]({url})")
+
+        if len(ref_lines) > 1:
+            return content + "\n".join(ref_lines)
+        return content
 
     def _build_messages(
         self, state: AgentState, complexity_hint: dict | None = None
