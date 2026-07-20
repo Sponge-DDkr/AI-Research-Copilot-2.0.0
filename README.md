@@ -7,6 +7,8 @@
 
 传统人工研究一个课题耗时 4-8 小时，AI Research Copilot 压缩到 **2-5 分钟**，且每一步思考过程实时可见。
 
+📺 **项目介绍视频**：[Bilibili 主页](https://space.bilibili.com/494206751)
+
 ---
 
 ## 架构概览
